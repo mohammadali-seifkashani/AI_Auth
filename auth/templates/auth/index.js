@@ -36,21 +36,6 @@ if (navigator.mediaDevices.getUserMedia) {
             stop.disabled = false;
             record.disabled = true;
         }
-
-        function download() {
-            var blob = new Blob(recordedChunks, {
-                type: 'video/webm'
-            });
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            document.body.appendChild(a);
-            a.style = 'display: none';
-            a.href = url;
-            a.download = 'test.webm';
-            a.click();
-            window.URL.revokeObjectURL(url);
-        }
-
         stop.onclick = function() {
             mediaRecorder.stop();
             console.log(mediaRecorder.state);
@@ -86,16 +71,17 @@ if (navigator.mediaDevices.getUserMedia) {
             audio.controls = true;
             let blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
             const url = URL.createObjectURL(blob);
-            // const a = document.createElement('a');
-            // document.body.appendChild(a);
-            // a.style = 'display: none';
-            // a.href = url;
-            // a.download = 'test.ogg';
-            // a.click();
-            // window.URL.revokeObjectURL(url);
+            const a = document.createElement('a');
+            document.body.appendChild(a);
+            a.style = 'display: none';
+            a.href = url;
+            a.download = 'test.ogg';
+            a.click();
+            window.URL.revokeObjectURL(url);
             // var object = new ActiveXObject("Scripting.FileSystemObject");
             // var file = object.GetFile("~/Downloads/test.ogg");
             // file.Move("~/PycharmProjects/AI_Auth/");
+
             chunks = [];
             const audioURL = window.URL.createObjectURL(blob);
             audio.src = audioURL;
