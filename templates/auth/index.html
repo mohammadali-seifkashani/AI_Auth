@@ -1,3 +1,5 @@
+{% load static %}
+
 <!DOCTYPE html>
 <head>
     <meta charset="utf-8">
@@ -7,7 +9,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-
+    {#    <link rel="stylesheet" type="text/css" href="{% static 'auth/index.css' %}">#}
     <style>
         * {
             margin: 0;
@@ -16,7 +18,6 @@
         }
 
         html, body {
-        {#background-image: url("download.jpeg");#}
             background-position: center;
             background-repeat: repeat-y;
             background-size: cover;
@@ -195,14 +196,14 @@
     <!-- Nav tabs -->
     <ul class="nav nav-tabs justify-content-center" role="tablist">
         <li class="nav-item">
-            <a class="nav-link active" data-toggle="tab" href="#sign-up">Sign-up</a>
+            <a class="nav-link active" data-toggle="tab" href="#sign-up" onclick="signup_click()">Sign-up</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#sign-in">Sign-in</a>
+            <a class="nav-link" data-toggle="tab" href="#sign-in" onclick="signin_click()">Sign-in</a>
         </li>
     </ul>
 
-    <!-- Tab panes -->»
+    <!-- Tab panes -->
     <div class="tab-content">
         <div id="sign-up" class="container tab-pane active"><br>
             <form class="form-inline justify-content-center" action="{% url 'submit' %}" method="post">
@@ -210,7 +211,7 @@
                 <label for="email">Email address: &nbsp</label>
                 <input type="email" class="form-control" placeholder="Enter email" id="email" name="email">
                 <input class="btn btn-primary" type="submit" onclick="stop_webcam()" value="submit"
-                       style="position: absolute; bottom: -400px">
+                       style="position: absolute; bottom: -600px">
             </form>
             <br>
         </div>
@@ -218,7 +219,7 @@
             <form class="form-inline justify-content-center" action="{% url 'submit' %}" method="post">
                 {% csrf_token %}
                 <input class="btn btn-primary" type="submit" onclick="stop_webcam()" value="submit"
-                       style="position: absolute; bottom: -300px">
+                       style="position: absolute; bottom: -375px">
             </form>
         </div>
     </div>
@@ -227,11 +228,13 @@
 <div id="container">
     <video autoplay="true" id="videoElement"></video>
 </div>
+<br>
 
 <div class="wrapper">
 
-    <header>
-        <h1>Web dictaphone</h1>
+    <header id="help_text">
+        <h1 style="direction: rtl">لطفا جملات زیر را با لذت و علاقه بخوانید: 😊</h1>
+        <pre style="direction: rtl; text-align: center; font-size: 20px; font-family: Arial,serif;">{{ hadith }}</pre>
     </header>
 
     <section class="main-controls">
@@ -254,17 +257,15 @@
     <p>Icon courtesy of <a href="http://findicons.com/search/microphone">Find Icons</a>. Thanks to <a href="http://soledadpenades.com/">Sole</a> for the Oscilloscope code!</p>
 </aside>
 
-<br>
-{#<div class="d-flex justify-content-center">#}
-{#    <form action="{% url 'submit' %}" method="post">#}
-{#        {% csrf_token %}#}
-{#        <label for="fname">name</label><input type="text" id="fname" name="fname" value="John"><br>#}
-{##}
-{#        <input class="btn btn-primary" type="submit" onclick="stop_webcam()" value="submit">#}
-{#    </form>#}
-{#</div>#}
-
 <script type="text/javascript">
+    window.email_exists = true;
+    url = []
+
+    header = document.getElementById('help_text');
+    h40 = header.children[0];
+    h41 = header.children[1];
+    spoken_text = h41.innerHTML;
+
     // set up basic variables for app
     const record = document.querySelector('.record');
     const stop = document.querySelector('.stop');
@@ -318,8 +319,6 @@
             mediaRecorder.onstop = function(e) {
                 console.log("data available after MediaRecorder.stop() called.");
 
-                const clipName = 'a';
-
                 const clipContainer = document.createElement('article');
                 const audio = document.createElement('audio');
                 const deleteButton = document.createElement('button');
@@ -334,16 +333,16 @@
                 soundClips.appendChild(clipContainer);
 
                 audio.controls = true;
-                let blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
-                window.url = URL.createObjectURL(blob);
+                let blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=0' });
+                url.push(URL.createObjectURL(blob));
                 chunks = [];
-                const audioURL = window.URL.createObjectURL(blob);
-                audio.src = audioURL;
+                audio.src = window.URL.createObjectURL(blob);
 
                 console.log("recorder stopped");
 
                 deleteButton.onclick = function(e) {
                     let evtTgt = e.target;
+                    url.pop();
                     evtTgt.parentNode.parentNode.removeChild(evtTgt.parentNode);
                 }
             }
@@ -427,11 +426,9 @@
     window.onresize();
 
 </script>
-
 <script>
     var video = document.querySelector("#videoElement");
 
-    {#if (window.confirm('Use your camera')) {#}
     if (navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({video: true})
             .then(function (stream) {
@@ -441,6 +438,22 @@
                 console.log("Something went wrong!");
             });
 
+    }
+
+    function signin_click() {
+        help_text = 'لطفا عدد زیر را در یک صوت و دو رقم-دو رقم و یا سه رقم-سه رقم از سمت چپ با تلفظ فارسی بخوانید.';
+        h40 = header.children[0];
+        h40.innerHTML = help_text;
+        h41.innerHTML = {{ number }};
+        email_exists = false;
+    }
+
+    function signup_click() {
+        help_text = 'لطفا جملات زیر را با لذت و علاقه بخوانید: 😊';
+        h40 = header.children[0];
+        h40.innerHTML = help_text;
+        h41.innerHTML = spoken_text;
+        email_exists = true;
     }
 
     function stop_webcam(e) {
@@ -457,11 +470,28 @@
         const a = document.createElement('a');
         document.body.appendChild(a);
         a.style = 'display: none';
-        a.href = url;
-        a.download = 'test.ogg';
-        a.click();
+        if (email_exists) {
+            a.download = 'base1.ogg';
+            a.href = url[0];
+            a.click();
+            a.download = 'base2.ogg';
+            a.href = url[1];
+            a.click();
+            a.download = 'base3.ogg';
+            a.href = url[2];
+            a.click();
+        } else {
+            a.download = 'new.ogg';
+            a.href = url[0];
+            a.click();
+        }
         window.URL.revokeObjectURL(url);
+    }
 
+    function help() {
+        if (email_exists) {
+            console.log(url);
+        }
     }
 </script>
 </body>
