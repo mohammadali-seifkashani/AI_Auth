@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'my_auth',
+    'rest_framework.authtoken'
 ]
 
 MIDDLEWARE = [
@@ -76,10 +78,20 @@ WSGI_APPLICATION = 'AI_Auth.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'ai_auth_db',
+        'USER': 'ai_auth_db_user',
+        'PASSWORD': 'ai_auth_db_user_password',
+        'HOST': 'localhost',
+        'PORT': '',
+        # 'TEST': {
+        #     'NAME': 'test_notification_service',
+        # },
     }
 }
+# db_from_env = dj_database_url.config(conn_max_age=600)
+# DATABASES['default'].update(db_from_env)
+
 
 
 # Password validation
@@ -126,4 +138,7 @@ STATICFILES_DIRS = (
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-AUTH_USER_MODEL = 'auth.User'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+AUTH_USER_MODEL = 'my_auth.MyUser'
