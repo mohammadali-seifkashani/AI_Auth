@@ -3,12 +3,18 @@ import base64
 import os
 import shutil
 import uuid
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.generic import TemplateView
 from resemblyzer import preprocess_wav, VoiceEncoder
 from itertools import groupby
 from pathlib import Path
+
+from rest_framework import permissions
 from rest_framework.authtoken.models import Token
+from rest_framework.renderers import TemplateHTMLRenderer
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from tqdm import tqdm
 import numpy as np
 import face_recognition
@@ -32,32 +38,35 @@ def submit(request):
     response = get_dict_from_bytes(request.body)
     if 'email' in response:  # signup
         email = response['email']
+        password = response['password']
         image_dir_path = f'media/images/{email}'
         voice_dir_path = f'media/voices/{email}'
-        # testing_removing()
+        testing_removing()
         try:
             os.mkdir(image_dir_path)
             os.mkdir(voice_dir_path)
-        except FileExistsError as e:
-            global random_num
+        except FileExistsError:
             return JsonResponse({'error': 'Email Already Exists!'})
 
-        user = MyUser.objects.create(email=email)
+        user = MyUser.objects.create(email=email, revealing_password=password)
         save_image(email, response['image'][22:], 'base')
         save_voice(email, response['audio1'][32:], 'base1')
         save_voice(email, response['audio2'][32:], 'base2')
         save_voice(email, response['audio3'][32:], 'base3')
 
-        return HttpResponse(Token.objects.create(user=user).key)
+        token_str = Token.objects.create(user=user).key
+        json_response = JsonResponse({'token': token_str})
+        json_response.set_cookie(key='Token', value=token_str)
+        return json_response
     else:
         filename = uuid.uuid4().__str__()
-        user = check_static_password_and_get_user(response['audio1'], filename)
+        user = check_static_password_and_get_user(response['audio1'][32:], filename)
         if not user:
             return JsonResponse({'error': 'Invalid User!'})
 
         move_first_audio_to_user_voices_folder(user.email, filename)
-        save_voice(user.email, response['audio2'], 'new')
-        save_image(user.email, response['image'], 'new')
+        save_voice(user.email, response['audio2'][32:], 'new')
+        save_image(user.email, response['image'][22:], 'new')
 
         voice_equality, spoken_number_equlity = voice_authentication(user.email)
         face_equality = face_authentication(user.email)
@@ -69,7 +78,24 @@ def submit(request):
         if not face_equality:
             return JsonResponse({'error': 'Invalid User Face!'})
 
-        return HttpResponse(Token.objects.create(user=user).key)
+        remove_fiels_of_signin(user.email, filename)
+
+        token_str = Token.objects.get(user=user).key
+        json_response = JsonResponse({'token': token_str})
+        json_response.set_cookie(key='Token', value=token_str)
+        return json_response
+
+
+class HomePageView(APIView):
+    # permission_classes = [permissions.IsAuthenticated]
+    renderer_classes = [TemplateHTMLRenderer]
+    template_name = 'auth/home.html'
+
+    def get(self, request):
+        cookie = request.COOKIES.get('Token')
+        response = Response({'profiles': 2})
+        response.headers = {'Token': cookie}
+        return response
 
 
 def save_image(email, image_base64, name):
@@ -92,6 +118,7 @@ def check_static_password_and_get_user(voice_base64, filename):
     decode_string = base64.b64decode(voice_base64)
     wav_file.write(decode_string)
     try:
+        # need for remove files
         spoken_number = get_spoken_number(filename)
         user = MyUser.objects.get(revealing_password=spoken_number)
     except Exception:
@@ -124,7 +151,7 @@ def voice_authentication(email):
     global random_num
     voice_equality = get_voice_equality(email)
     # spoken_number_equality = conformity_percentage(get_spoken_number(email + '/new.ogg'), str(random_num))
-    spoken_number_equality = get_spoken_number(email + '/new.ogg') == str(random_num)
+    spoken_number_equality = get_spoken_number(email + '/new') == str(random_num)
     return voice_equality, spoken_number_equality
 
 
@@ -148,41 +175,14 @@ def get_voice_equality(email):
 def get_spoken_number(file_path_name):
     base_path = '/home/mohammadali/PycharmProjects/AI_Auth/media/voices/'
     file_path = base_path + file_path_name
-    subprocess.run(f'ffmpeg -i {file_path} {base_path}/{file_path_name}.wav',
+    subprocess.run(f'ffmpeg -i {file_path}.ogg {base_path}{file_path_name}.wav',
                    shell=True, capture_output=True, input=b'y')
-
     r = sr.Recognizer()
-
-    harvard = sr.AudioFile(f'{base_path}/{file_path_name}.wav')
+    harvard = sr.AudioFile(f'{base_path}{file_path_name}.wav')
     with harvard as source:
         audio = r.record(source)
-
     result = r.recognize_google(audio, language='fa-IR')
-
     return convert_numbers.persian_to_english(result)
-
-
-# def conformity_percentage(str1, str2):
-#     counter = 0
-#     if len(str1) != len(str2):
-#         j = k = 0
-#         counter = abs(len(str1) - len(str2))
-#         for i in range(min(len(str1), len(str2))):
-#             if str1[j] != str2[k]:
-#                 counter += 1
-#                 k += 1
-#                 continue
-#             j += 1
-#             k += 1
-#         result = 1 - counter / max(len(str1), len(str2))
-#         return result > .9
-#     else:
-#         for i in range(len(str1)):
-#             if str1[i] != str2[i]:
-#                 counter += 1
-#         result = 1 - counter / len(str1)
-#         print('**************************************confomity: ', result)
-#         return result > .9
 
 
 def get_random_hadith():
@@ -194,6 +194,16 @@ def get_random_hadith():
     random_hadith_index3 = random.randint(0, hadith_count - 1)
     result = texts[random_hadith_index1] + '\n' + texts[random_hadith_index2] + '\n' + texts[random_hadith_index3]
     return result
+
+
+def remove_fiels_of_signin(email, filename):
+    base_path = '/home/mohammadali/PycharmProjects/AI_Auth/media/'
+    base_voices_path = base_path + f'voices/{email}/'
+    base_images_path = base_path + f'images/{email}/'
+    os.remove(base_voices_path + f'{filename}.ogg')
+    os.remove(base_voices_path + 'new.ogg')
+    os.remove(base_voices_path + 'new.wav')
+    os.remove(base_images_path + 'new.jpg')
 
 
 def testing_removing():
@@ -229,3 +239,25 @@ def get_dict_from_bytes(bytes_object):
 #     img = cam.get_image()
 #     pygame.image.save(img, f"{path}/{filename}.jpg")
 #     cam.stop()
+
+
+# def conformity_percentage(str1, str2):
+#     counter = 0
+#     if len(str1) != len(str2):
+#         j = k = 0
+#         counter = abs(len(str1) - len(str2))
+#         for i in range(min(len(str1), len(str2))):
+#             if str1[j] != str2[k]:
+#                 counter += 1
+#                 k += 1
+#                 continue
+#             j += 1
+#             k += 1
+#         result = 1 - counter / max(len(str1), len(str2))
+#         return result > .9
+#     else:
+#         for i in range(len(str1)):
+#             if str1[i] != str2[i]:
+#                 counter += 1
+#         result = 1 - counter / len(str1)
+#         return result > .9

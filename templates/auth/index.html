@@ -214,7 +214,7 @@
                     <div class="invalid-feedback" style="display: none" id="email_empty">Email must not be empty!</div>
                 </div>
                 <div class="form-group">
-                    <label for="pwd">Static (Revealing) Password:</label>
+                    <label for="pwd">Static (Revealing) Password (6 digits):</label>
                     <input type="password" class="form-control" id="password" placeholder="Enter password" name="password" required>
                     <div class="invalid-feedback" style="display: none" id="password_empty">Password must not be empty!</div>
                 </div>
@@ -241,7 +241,7 @@
 <div class="wrapper">
 
     <header id="help_text">
-        <h1 style="direction: rtl">لطفا جملات زیر را با لذت در دو صوت بخوانید: 😊</h1>
+        <h1 style="direction: rtl">لطفا جملات زیر را با لذت در سه صوت بخوانید: 😊</h1>
         <pre style="direction: rtl; text-align: center; font-size: 20px; font-family: Arial,serif;">{{ hadith }}</pre>
     </header>
 
@@ -520,7 +520,7 @@
         takepicture();
 
         if (email_exists) {
-            for (i = 0; i < url.length; i++) {
+            for (i = 0; i < 3; i++) {
                 let audio_num = `audio${i+1}`;
                 console.log(audio_num);
                 audio = document.getElementById(audio_num);
@@ -580,7 +580,15 @@
             });
             const content = await rawResponse.json();
 
-            console.log(content);
+            if (content.hasOwnProperty('error')) {
+                alert(content['error']);
+                return;
+            }
+
+            token = content['token'];
+            // document.cookie = `Authorization=Token ${token}; path=/`;
+
+            location.replace('/auth/site');
         })();
     }
 </script>
