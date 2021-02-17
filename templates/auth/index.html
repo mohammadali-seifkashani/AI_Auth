@@ -565,12 +565,13 @@
             csrftoken = document.getElementsByName('csrfmiddlewaretoken')[1].value;
         }
 
+        let token = null;
+
         (async () => {
             const rawResponse = await fetch('http://127.0.0.1:8000/auth/submit/', {
                 method: 'POST',
                 mode: 'cors', // no-cors, *cors, same-origin
                 cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-                credentials: 'same-origin', // include, *same-origin, omit
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
@@ -580,15 +581,15 @@
             });
             const content = await rawResponse.json();
 
+            token = content['token'];
+
             if (content.hasOwnProperty('error')) {
                 alert(content['error']);
                 return;
             }
-
-            token = content['token'];
-            // document.cookie = `Authorization=Token ${token}; path=/`;
-
-            location.replace('/auth/site');
+            document.cookie = `Authorization=Token ${token}; path=/`;
+            sessionStorage.setItem('Authorization', 'Token ' + token);
+            location.replace('/auth/home/');
         })();
     }
 </script>

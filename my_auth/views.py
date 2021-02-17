@@ -3,13 +3,11 @@ import base64
 import os
 import shutil
 import uuid
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.views.generic import TemplateView
+from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render, redirect
 from resemblyzer import preprocess_wav, VoiceEncoder
 from itertools import groupby
 from pathlib import Path
-
 from rest_framework import permissions
 from rest_framework.authtoken.models import Token
 from rest_framework.renderers import TemplateHTMLRenderer
@@ -23,6 +21,7 @@ import speech_recognition as sr
 import subprocess
 import convert_numbers
 from my_auth.models import MyUser
+
 
 random_num = 0
 
@@ -54,9 +53,12 @@ def submit(request):
         save_voice(email, response['audio2'][32:], 'base2')
         save_voice(email, response['audio3'][32:], 'base3')
 
-        token_str = Token.objects.create(user=user).key
-        json_response = JsonResponse({'token': token_str})
-        json_response.set_cookie(key='Token', value=token_str)
+        token = Token.objects.create(user=user)
+        json_response = JsonResponse({'token': token.key})
+        request.session['Authorization'] = token.key
+        json_response.set_cookie(key='Authorization', value=token.key)
+        # json_response.session['Authorization'] = 'Token ' + token.key
+        # json_response.set_signed_cookie(key='Authorization', value='Token ' + token_str)
         return json_response
     else:
         filename = uuid.uuid4().__str__()
@@ -72,35 +74,36 @@ def submit(request):
         face_equality = face_authentication(user.email)
 
         if not voice_equality:
+            remove_fiels_of_signin(user.email, filename)
             return JsonResponse({'error': 'Invalid User Voice!'})
         if not spoken_number_equlity:
+            remove_fiels_of_signin(user.email, filename)
             return JsonResponse({'error': 'Spoken Captcha Number not Equal!'})
         if not face_equality:
+            remove_fiels_of_signin(user.email, filename)
             return JsonResponse({'error': 'Invalid User Face!'})
 
         remove_fiels_of_signin(user.email, filename)
 
         token_str = Token.objects.get(user=user).key
-        json_response = JsonResponse({'token': token_str})
+        json_response = JsonResponse({'token': 'Token ' + token_str})
         json_response.set_cookie(key='Token', value=token_str)
         return json_response
 
 
 class HomePageView(APIView):
-    # permission_classes = [permissions.IsAuthenticated]
     renderer_classes = [TemplateHTMLRenderer]
     template_name = 'auth/home.html'
 
     def get(self, request):
-        cookie = request.COOKIES.get('Token')
+        print(100000000000)
         response = Response({'profiles': 2})
-        response.headers = {'Token': cookie}
         return response
 
 
 def save_image(email, image_base64, name):
     imgdata = base64.b64decode(image_base64)
-    filename = 'media/images/{}/{}.jpg'.format(email, name)  # I assume you have a way of picking unique filenames
+    filename = f'media/images/{email}/{name}.jpg'  # I assume you have a way of picking unique filenames
     with open(filename, 'wb') as f:
         f.write(imgdata)
 
@@ -150,8 +153,8 @@ def face_authentication(email):
 def voice_authentication(email):
     global random_num
     voice_equality = get_voice_equality(email)
-    # spoken_number_equality = conformity_percentage(get_spoken_number(email + '/new.ogg'), str(random_num))
-    spoken_number_equality = get_spoken_number(email + '/new') == str(random_num)
+    spoken_number_equality = conformity_percentage(get_spoken_number(email + '/new'), str(random_num))
+    # spoken_number_equality = get_spoken_number(email + '/new') == str(random_num)
     return voice_equality, spoken_number_equality
 
 
@@ -169,6 +172,7 @@ def get_voice_equality(email):
     spk_embeds_b = np.array([encoder.embed_speaker(wavs[len(wavs) // 2:]) for wavs in speaker_wavs.values()])
     spk_sim_matrix = np.inner(spk_embeds_a, spk_embeds_b)
 
+    print(spk_sim_matrix[0][0])
     return spk_sim_matrix[0][0] > 0.93
 
 
@@ -182,6 +186,7 @@ def get_spoken_number(file_path_name):
     with harvard as source:
         audio = r.record(source)
     result = r.recognize_google(audio, language='fa-IR')
+    print(convert_numbers.persian_to_english(result))
     return convert_numbers.persian_to_english(result)
 
 
@@ -241,23 +246,23 @@ def get_dict_from_bytes(bytes_object):
 #     cam.stop()
 
 
-# def conformity_percentage(str1, str2):
-#     counter = 0
-#     if len(str1) != len(str2):
-#         j = k = 0
-#         counter = abs(len(str1) - len(str2))
-#         for i in range(min(len(str1), len(str2))):
-#             if str1[j] != str2[k]:
-#                 counter += 1
-#                 k += 1
-#                 continue
-#             j += 1
-#             k += 1
-#         result = 1 - counter / max(len(str1), len(str2))
-#         return result > .9
-#     else:
-#         for i in range(len(str1)):
-#             if str1[i] != str2[i]:
-#                 counter += 1
-#         result = 1 - counter / len(str1)
-#         return result > .9
+def conformity_percentage(str1, str2):
+    counter = 0
+    if len(str1) != len(str2):
+        j = k = 0
+        counter = abs(len(str1) - len(str2))
+        for i in range(min(len(str1), len(str2))):
+            if str1[j] != str2[k]:
+                counter += 1
+                k += 1
+                continue
+            j += 1
+            k += 1
+        result = 1 - counter / max(len(str1), len(str2))
+        return result > .9
+    else:
+        for i in range(len(str1)):
+            if str1[i] != str2[i]:
+                counter += 1
+        result = 1 - counter / len(str1)
+        return result > .9

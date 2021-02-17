@@ -39,6 +39,25 @@ class MyUser(AbstractBaseUser):
     email = models.EmailField(_('email address'), unique=True)
     revealing_password = models.CharField(max_length=6)
 
+    is_active = models.BooleanField(default=True)
+    is_admin = models.BooleanField(default=False)
+
+    def has_perm(self, perm, obj=None):
+        "Does the user have a specific permission?"
+        # Simplest possible answer: Yes, always
+        return True
+
+    def has_module_perms(self, app_label):
+        "Does the user have permissions to view the app `app_label`?"
+        # Simplest possible answer: Yes, always
+        return True
+
+    @property
+    def is_staff(self):
+        "Is the user a member of staff?"
+        # Simplest possible answer: All admins are staff
+        return self.is_admin
+
     objects = MyUserManager()
 
     USERNAME_FIELD = 'email'
@@ -55,4 +74,3 @@ class MyUser(AbstractBaseUser):
 # class UserVoice(models.Model):
 #     user = models.ForeignKey(MyUser, on_delete=models.CASCADE)
 #     voice = models.FileField(upload_to='voices/')
-
