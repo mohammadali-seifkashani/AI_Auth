@@ -184,7 +184,7 @@ def get_spoken_number(file_path_name):
 
 
 def get_random_hadith():
-    f = open('my_auth/hadith.txt', 'r')  # export PYTOHNPATH=$PYTHONPATH:$(pwd)
+    f = open('static/my_auth/hadith.txt', 'r')  # export PYTOHNPATH=$PYTHONPATH:$(pwd)
     texts = f.read().split('\n\n')
     hadith_count = len(texts)
     random_hadith_index1 = random.randint(0, hadith_count - 1)
