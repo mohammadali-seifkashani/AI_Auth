@@ -35,12 +35,11 @@ def index(request):
 
 def submit(request):
     response = get_dict_from_bytes(request.body)
-    if 'email' in response:  # signup
+    if 'email' in response:  # sign-up
         email = response['email']
         password = response['password']
         image_dir_path = f'media/images/{email}'
         voice_dir_path = f'media/voices/{email}'
-        # testing_removing()
         try:
             os.mkdir(image_dir_path)
             os.mkdir(voice_dir_path)
@@ -55,10 +54,8 @@ def submit(request):
 
         token = Token.objects.create(user=user)
         json_response = JsonResponse({'token': token.key})
-        # json_response.set_cookie(key='Authorization', value=token.key)
-        # request.session['Authorization'] = token.key
         return json_response
-    else:
+    else:  # sign-in
         filename = uuid.uuid4().__str__()
         user = check_static_password_and_get_user(response['audio1'][32:], filename)
         if not user:
@@ -101,7 +98,7 @@ class HomePageView(APIView):
 
 def save_image(email, image_base64, name):
     imgdata = base64.b64decode(image_base64)
-    filename = f'media/images/{email}/{name}.jpg'  # I assume you have a way of picking unique filenames
+    filename = f'media/images/{email}/{name}.jpg'
     with open(filename, 'wb') as f:
         f.write(imgdata)
 
@@ -110,7 +107,7 @@ def save_voice(email, voice_base64, name):
     if voice_base64 == '':
         return
     voicedata = base64.b64decode(voice_base64)
-    filename = f'media/voices/{email}/{name}.ogg'  # I assume you have a way of picking unique filenames
+    filename = f'media/voices/{email}/{name}.ogg'
     with open(filename, 'wb') as f:
         f.write(voicedata)
 
@@ -120,7 +117,6 @@ def check_static_password_and_get_user(voice_base64, filename):
     decode_string = base64.b64decode(voice_base64)
     wav_file.write(decode_string)
     try:
-        # need for remove files
         spoken_number = get_spoken_number(filename)
         user = MyUser.objects.get(revealing_password=spoken_number)
     except Exception:
@@ -153,7 +149,6 @@ def voice_authentication(email):
     global random_num
     voice_equality = get_voice_equality(email)
     spoken_number_equality = conformity_percentage(get_spoken_number(email + '/new'), str(random_num))
-    # spoken_number_equality = get_spoken_number(email + '/new') == str(random_num)
     return voice_equality, spoken_number_equality
 
 
@@ -161,7 +156,6 @@ def get_voice_equality(email):
     encoder = VoiceEncoder()
 
     wav_fpaths = list(Path(f"/home/mohammadali/PycharmProjects/AI_Auth/media/voices/{email}").glob("**/*.ogg"))
-    # need to check not here for count of user files
 
     speaker_wavs = {speaker: list(map(preprocess_wav, wav_fpaths)) for speaker, wav_fpaths in
                     groupby(tqdm(wav_fpaths, "Preprocessing wavs", len(wav_fpaths), unit="wavs"),
@@ -244,25 +238,3 @@ def conformity_percentage(str1, str2):
                 counter += 1
         result = 1 - counter / len(str1)
         return result > .9
-
-# def get_download_path():
-#     """Returns the default downloads path for linux or windows"""
-#     if os.name == 'nt':
-#         import winreg
-#         sub_key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders'
-#         downloads_guid = '{374DE290-123F-4565-9164-39C4925E467B}'
-#         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub_key) as key:
-#             location = winreg.QueryValueEx(key, downloads_guid)[0]
-#         return location
-#     else:
-#         return os.path.join(os.path.expanduser('~'), 'Downloads')
-
-
-# def takePictureAndStopCam(path, filename):
-#     pygame.camera.init()
-#     pygame.camera.list_cameras()  # Camera detected or not
-#     cam = pygame.camera.Camera("/dev/video0", (640, 480))
-#     cam.start()
-#     img = cam.get_image()
-#     pygame.image.save(img, f"{path}/{filename}.jpg")
-#     cam.stop()
