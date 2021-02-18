@@ -68,18 +68,19 @@ def submit(request):
         save_voice(user.email, response['audio2'][32:], 'new')
         save_image(user.email, response['image'][22:], 'new')
 
-        voice_equality, spoken_number_equlity = voice_authentication(user.email)
         face_equality = face_authentication(user.email)
 
+        if not face_equality:
+            remove_fiels_of_signin(user.email, filename)
+            return JsonResponse({'error': 'Invalid User Face!'})
+
+        voice_equality, spoken_number_equlity = voice_authentication(user.email)
         if not voice_equality:
             remove_fiels_of_signin(user.email, filename)
             return JsonResponse({'error': 'Invalid User Voice!'})
         if not spoken_number_equlity:
             remove_fiels_of_signin(user.email, filename)
             return JsonResponse({'error': 'Spoken Captcha Number not Equal!'})
-        if not face_equality:
-            remove_fiels_of_signin(user.email, filename)
-            return JsonResponse({'error': 'Invalid User Face!'})
 
         remove_fiels_of_signin(user.email, filename)
 
@@ -108,9 +109,10 @@ def save_image(email, image_base64, name):
 def save_voice(email, voice_base64, name):
     if voice_base64 == '':
         return
-    wav_file = open("media/voices/{}/{}.ogg".format(email, name), "wb")
-    decode_string = base64.b64decode(voice_base64)
-    wav_file.write(decode_string)
+    voicedata = base64.b64decode(voice_base64)
+    filename = f'media/voices/{email}/{name}.ogg'  # I assume you have a way of picking unique filenames
+    with open(filename, 'wb') as f:
+        f.write(voicedata)
 
 
 def check_static_password_and_get_user(voice_base64, filename):
@@ -221,28 +223,6 @@ def get_dict_from_bytes(bytes_object):
     dict_str = bytes_object.decode("UTF-8")
     return ast.literal_eval(dict_str)
 
-# def get_download_path():
-#     """Returns the default downloads path for linux or windows"""
-#     if os.name == 'nt':
-#         import winreg
-#         sub_key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders'
-#         downloads_guid = '{374DE290-123F-4565-9164-39C4925E467B}'
-#         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub_key) as key:
-#             location = winreg.QueryValueEx(key, downloads_guid)[0]
-#         return location
-#     else:
-#         return os.path.join(os.path.expanduser('~'), 'Downloads')
-
-
-# def takePictureAndStopCam(path, filename):
-#     pygame.camera.init()
-#     pygame.camera.list_cameras()  # Camera detected or not
-#     cam = pygame.camera.Camera("/dev/video0", (640, 480))
-#     cam.start()
-#     img = cam.get_image()
-#     pygame.image.save(img, f"{path}/{filename}.jpg")
-#     cam.stop()
-
 
 def conformity_percentage(str1, str2):
     counter = 0
@@ -264,3 +244,25 @@ def conformity_percentage(str1, str2):
                 counter += 1
         result = 1 - counter / len(str1)
         return result > .9
+
+# def get_download_path():
+#     """Returns the default downloads path for linux or windows"""
+#     if os.name == 'nt':
+#         import winreg
+#         sub_key = r'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders'
+#         downloads_guid = '{374DE290-123F-4565-9164-39C4925E467B}'
+#         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub_key) as key:
+#             location = winreg.QueryValueEx(key, downloads_guid)[0]
+#         return location
+#     else:
+#         return os.path.join(os.path.expanduser('~'), 'Downloads')
+
+
+# def takePictureAndStopCam(path, filename):
+#     pygame.camera.init()
+#     pygame.camera.list_cameras()  # Camera detected or not
+#     cam = pygame.camera.Camera("/dev/video0", (640, 480))
+#     cam.start()
+#     img = cam.get_image()
+#     pygame.image.save(img, f"{path}/{filename}.jpg")
+#     cam.stop()

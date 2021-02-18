@@ -38,9 +38,11 @@ INSTALLED_APPS = [
     'my_auth',
     'rest_framework.authtoken',
     'rest_framework',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -149,3 +151,4 @@ REST_FRAMEWORK = {
 
 # SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 # SESSION_COOKIE_NAME = 'Authorization'
+CORS_ORIGIN_ALLOW_ALL = True
