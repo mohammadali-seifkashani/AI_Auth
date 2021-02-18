@@ -3,14 +3,12 @@ import base64
 import os
 import shutil
 import uuid
-from django.http import JsonResponse, HttpResponse
-from django.shortcuts import render, redirect
+from django.http import JsonResponse
+from django.shortcuts import render
 from resemblyzer import preprocess_wav, VoiceEncoder
 from itertools import groupby
 from pathlib import Path
-from rest_framework import permissions, authentication
 from rest_framework.authtoken.models import Token
-from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -24,10 +22,6 @@ import convert_numbers
 from my_auth.models import MyUser
 from .customauth import ExampleAuthentication
 
-from django.contrib.auth.models import User
-from rest_framework import authentication
-from rest_framework import exceptions
-
 
 random_num = 0
 
@@ -36,7 +30,7 @@ def index(request):
     global random_num
     random_num = random.randint(0, 10000000000)
     context = {'number': random_num, 'hadith': get_random_hadith()}
-    return render(request, 'auth/index.html', context)
+    return render(request, 'my_auth/index.html', context)
 
 
 def submit(request):
@@ -46,7 +40,7 @@ def submit(request):
         password = response['password']
         image_dir_path = f'media/images/{email}'
         voice_dir_path = f'media/voices/{email}'
-        testing_removing()
+        # testing_removing()
         try:
             os.mkdir(image_dir_path)
             os.mkdir(voice_dir_path)
@@ -90,15 +84,14 @@ def submit(request):
         remove_fiels_of_signin(user.email, filename)
 
         token_str = Token.objects.get(user=user).key
-        json_response = JsonResponse({'token': 'Token ' + token_str})
-        json_response.set_cookie(key='Token', value=token_str)
+        json_response = JsonResponse({'token': token_str})
         return json_response
 
 
 class HomePageView(APIView):
     authentication_classes = [ExampleAuthentication]
     renderer_classes = [TemplateHTMLRenderer]
-    template_name = 'auth/home.html'
+    template_name = 'my_auth/home.html'
 
     def get(self, request):
         response = Response({'profiles': 2})
@@ -212,7 +205,8 @@ def remove_fiels_of_signin(email, filename):
     os.remove(base_voices_path + f'{filename}.ogg')
     os.remove(base_voices_path + 'new.ogg')
     os.remove(base_voices_path + 'new.wav')
-    os.remove(base_images_path + 'new.jpg')
+    os.remove(base_images_path + 'base.jpg')
+    os.rename(base_images_path + 'new.jpg', base_images_path + 'base.jpg')
 
 
 def testing_removing():
@@ -270,18 +264,3 @@ def conformity_percentage(str1, str2):
                 counter += 1
         result = 1 - counter / len(str1)
         return result > .9
-
-
-def test(request):
-    print(1212314134)
-    return render(request, 'auth/home.html', {})
-
-
-class Test(APIView):
-    renderer_classes = [TemplateHTMLRenderer]
-    template_name = 'auth/home.html'
-
-    def get(self, request):
-        print(100000000000)
-        response = Response({'profiles': 2})
-        return response
