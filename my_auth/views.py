@@ -8,8 +8,9 @@ from django.shortcuts import render, redirect
 from resemblyzer import preprocess_wav, VoiceEncoder
 from itertools import groupby
 from pathlib import Path
-from rest_framework import permissions
+from rest_framework import permissions, authentication
 from rest_framework.authtoken.models import Token
+from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.renderers import TemplateHTMLRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,6 +22,11 @@ import speech_recognition as sr
 import subprocess
 import convert_numbers
 from my_auth.models import MyUser
+from .customauth import ExampleAuthentication
+
+from django.contrib.auth.models import User
+from rest_framework import authentication
+from rest_framework import exceptions
 
 
 random_num = 0
@@ -55,10 +61,8 @@ def submit(request):
 
         token = Token.objects.create(user=user)
         json_response = JsonResponse({'token': token.key})
-        request.session['Authorization'] = token.key
-        json_response.set_cookie(key='Authorization', value=token.key)
-        # json_response.session['Authorization'] = 'Token ' + token.key
-        # json_response.set_signed_cookie(key='Authorization', value='Token ' + token_str)
+        # json_response.set_cookie(key='Authorization', value=token.key)
+        # request.session['Authorization'] = token.key
         return json_response
     else:
         filename = uuid.uuid4().__str__()
@@ -92,11 +96,11 @@ def submit(request):
 
 
 class HomePageView(APIView):
+    authentication_classes = [ExampleAuthentication]
     renderer_classes = [TemplateHTMLRenderer]
     template_name = 'auth/home.html'
 
     def get(self, request):
-        print(100000000000)
         response = Response({'profiles': 2})
         return response
 
@@ -266,3 +270,18 @@ def conformity_percentage(str1, str2):
                 counter += 1
         result = 1 - counter / len(str1)
         return result > .9
+
+
+def test(request):
+    print(1212314134)
+    return render(request, 'auth/home.html', {})
+
+
+class Test(APIView):
+    renderer_classes = [TemplateHTMLRenderer]
+    template_name = 'auth/home.html'
+
+    def get(self, request):
+        print(100000000000)
+        response = Response({'profiles': 2})
+        return response

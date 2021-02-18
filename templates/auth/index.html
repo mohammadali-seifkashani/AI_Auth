@@ -587,9 +587,10 @@
                 alert(content['error']);
                 return;
             }
-            document.cookie = `Authorization=Token ${token}; path=/`;
-            sessionStorage.setItem('Authorization', 'Token ' + token);
-            location.replace('/auth/home/');
+
+            //document.cookie = `sessionid=${token}; path=/`;
+            //sessionStorage.setItem('Authorization', token);
+            location.replace(`/auth/home/?token=${token}`);
         })();
     }
 </script>

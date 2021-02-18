@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'my_auth',
     'rest_framework.authtoken',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -148,4 +149,3 @@ REST_FRAMEWORK = {
 
 # SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 # SESSION_COOKIE_NAME = 'Authorization'
-# SESSION_COOKIE_HTTPONLY = False
